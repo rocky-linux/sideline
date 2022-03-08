@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+option go_package = "github.com/rocky-linux/sideline/pb;sidelinepb";
+
+package sideline;
+
+message Upstream {
+  // Target forge
+  oneof forge {
+    // A git remote
+    string git = 1;
+  }
+
+  // Depth we need to clone
+  // For tags or branches targeting latest, only 1 is needed for example
+  int32 depth = 2;
+
+  // Target revision
+  oneof target {
+    // Caller wants a tag
+    string tag = 3;
+  }
+}
+
+message Changes {
+  // Paths listed here are recursively copied into Source0
+  // and overridden (always choosing upstream)
+  repeated string recursive_path = 1;
+}
+
+message PresetOverride {
+  oneof override {
+    string base_url = 1;
+    string full_url = 2;
+  }
+}
+
+message Configuration {
+  // Preset for source package
+  // Currently only supports "rocky8" or "manual"
+  // "rocky8" sets "base_url" to "https://dl.rockylinux.org/pub/rocky/8"
+  // "manual" sets nothing
+  string preset = 1;
+
+  // Source package name
+  // SRPM to be fetched from the source repository
+  // Format: {repo}//{name}
+  // Example: BaseOS//kernel
+  string package = 2;
+
+  // Upstream information
+  // Where the upstream of this package is located
+  // Only git is supported for now
+  Upstream upstream = 3;
+
+  // Changes we want to pull from upstream
+  Changes changes = 4;
+
+  // Manual override for preset
+  // Only used if preset is "manual"
+  PresetOverride preset_override = 5;
+
+  // Whether to add the patch to prep or not
+  // Packages that are not auto-patched will need to set this and n_path
+  bool add_to_prep = 6;
+
+  // Patch strip depth
+  int32 n_path = 7;
+}
