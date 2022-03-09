@@ -340,7 +340,41 @@ func recursivelyCopyPath(from billy.Filesystem, to *git.Worktree, path string) e
 	return nil
 }
 
-func backportUpstreamChanges(distro *git.Repository, upstream *git.Repository, changes *sidelinepb.Changes) error {
+func readFileBillyFs(fs billy.Filesystem, path string) ([]byte, error) {
+	f, err := fs.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not open file: %v", err)
+	}
+	defer func(f billy.File) {
+		_ = f.Close()
+	}(f)
+
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file: %v", err)
+	}
+
+	return b, nil
+}
+
+func writeFileBillyFs(fs billy.Filesystem, path string, data []byte) error {
+	f, err := fs.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("could not open file: %v", err)
+	}
+	defer func(f billy.File) {
+		_ = f.Close()
+	}(f)
+
+	_, err = f.Write(data)
+	if err != nil {
+		return fmt.Errorf("could not write file: %v", err)
+	}
+
+	return nil
+}
+
+func backportUpstreamChanges(distro *git.Repository, upstream *git.Repository, changes []*sidelinepb.Changes) error {
 	log.Printf("Backporting upstream changes")
 
 	distroW, err := distro.Worktree()
@@ -354,37 +388,66 @@ func backportUpstreamChanges(distro *git.Repository, upstream *git.Repository, c
 	}
 
 	// First do recursive overrides
-	for _, recursivePath := range changes.RecursivePath {
-		log.Printf("Recursively copying %s", recursivePath)
+	for i, change := range changes {
+		log.Printf("==> Executing change %d", i)
+		// Always first upstream to distro operations.
+		// Currently, only "recursive_path"
+		for _, recursivePath := range change.RecursivePath {
+			log.Printf("\t==> Recursively copying %s", recursivePath)
 
-		// Check that the recursive path exists in the upstream and is a directory
-		fi, err := upstreamW.Filesystem.Stat(recursivePath)
-		if err != nil {
-			return fmt.Errorf("failed to read directory: %v", err)
-		}
-		if !fi.IsDir() {
-			return fmt.Errorf("recursive path %s is not a directory in upstream", recursivePath)
+			// Check that the recursive path exists in the upstream and is a directory
+			fi, err := upstreamW.Filesystem.Stat(recursivePath)
+			if err != nil {
+				return fmt.Errorf("failed to read directory: %v", err)
+			}
+			if !fi.IsDir() {
+				return fmt.Errorf("recursive path %s is not a directory in upstream", recursivePath)
+			}
+
+			// First delete the path from distro worktree
+			err = recursivelyDeletePath(distroW.Filesystem, recursivePath)
+			if err != nil {
+				log.Printf("failed to remove path: %v, but continuing", err)
+			}
+
+			// Then re-create the directory
+			err = distroW.Filesystem.MkdirAll(recursivePath, 0755)
+			if err != nil {
+				return fmt.Errorf("failed to create directory: %v", err)
+			}
+			_, err = distroW.Add(recursivePath)
+			if err != nil {
+				return fmt.Errorf("failed to add path: %v", err)
+			}
+
+			err = recursivelyCopyPath(upstreamW.Filesystem, distroW, recursivePath)
+			if err != nil {
+				return fmt.Errorf("failed to copy path %s: %v", recursivePath, err)
+			}
 		}
 
-		// First delete the path from distro worktree
-		err = recursivelyDeletePath(distroW.Filesystem, recursivePath)
-		if err != nil {
-			log.Printf("failed to remove path: %v, but continuing", err)
-		}
+		// Now run file change operations
+		for _, fileChange := range change.FileChange {
+			log.Printf("\t==> Making changes to %s", fileChange.Path)
 
-		// Then re-create the directory
-		err = distroW.Filesystem.MkdirAll(recursivePath, 0755)
-		if err != nil {
-			return fmt.Errorf("failed to create directory: %v", err)
-		}
-		_, err = distroW.Add(recursivePath)
-		if err != nil {
-			return fmt.Errorf("failed to add path: %v", err)
-		}
+			// Search and replace first (and only right now)
+			for _, searchReplace := range fileChange.SearchReplace {
+				fileContents, err := readFileBillyFs(distroW.Filesystem, fileChange.Path)
+				if err != nil {
+					return fmt.Errorf("failed to read file: %v", err)
+				}
 
-		err = recursivelyCopyPath(upstreamW.Filesystem, distroW, recursivePath)
-		if err != nil {
-			return fmt.Errorf("failed to copy path %s: %v", recursivePath, err)
+				fileContents = []byte(strings.Replace(string(fileContents), searchReplace.Find, searchReplace.Replace, -1))
+				err = writeFileBillyFs(distroW.Filesystem, fileChange.Path, fileContents)
+				if err != nil {
+					return fmt.Errorf("failed to write file: %v", err)
+				}
+
+				_, err = distroW.Add(fileChange.Path)
+				if err != nil {
+					return fmt.Errorf("failed to add file: %v", err)
+				}
+			}
 		}
 	}
 

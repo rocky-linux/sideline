@@ -39,7 +39,11 @@ func mn(_ *cobra.Command, _ []string) {
 	}
 
 	directivesPath := filepath.Join(output, "directives.cfg")
-	directives, err := prototext.Marshal(resp.Srpmproc)
+	marshalOptions := prototext.MarshalOptions{
+		Indent:    "  ",
+		Multiline: true,
+	}
+	directives, err := marshalOptions.Marshal(resp.Srpmproc)
 	if err != nil {
 		log.Fatal(err)
 	}

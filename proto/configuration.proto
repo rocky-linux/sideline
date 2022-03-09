@@ -22,10 +22,25 @@ message Upstream {
   }
 }
 
+message SearchReplace {
+  string find = 1;
+  string replace = 2;
+}
+
+message FileChange {
+  // Path to file
+  string path = 1;
+
+  // Search and replace operations on file
+  repeated SearchReplace search_replace = 2;
+}
+
 message Changes {
   // Paths listed here are recursively copied into Source0
   // and overridden (always choosing upstream)
   repeated string recursive_path = 1;
+
+  repeated FileChange file_change = 2;
 }
 
 message PresetOverride {
@@ -54,7 +69,7 @@ message Configuration {
   Upstream upstream = 3;
 
   // Changes we want to pull from upstream
-  Changes changes = 4;
+  repeated Changes changes = 4;
 
   // Manual override for preset
   // Only used if preset is "manual"
