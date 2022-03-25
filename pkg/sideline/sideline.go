@@ -662,8 +662,8 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 	commitMsg := fmt.Sprintf("Backport changes from %s (tag: %s)", cfg.Upstream.GetGit(), cfg.Upstream.GetTag())
 	commitHash, err := distroW.Commit(commitMsg, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "RESF Sideline",
-			Email: "mustafa+sideline@rockylinux.org",
+			Name:  "RESF Sideline (Backporter)",
+			Email: "releng+sideline@rockylinux.org",
 			When:  time.Now(),
 		},
 	})
