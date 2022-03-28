@@ -2,6 +2,8 @@ syntax = "proto3";
 
 option go_package = "github.com/rocky-linux/sideline/pb;sidelinepb";
 
+import "third_party/github.com/rocky-linux/srpmproc/proto/cfg.proto";
+
 package sideline;
 
 message Upstream {
@@ -50,6 +52,25 @@ message PresetOverride {
   }
 }
 
+message AutoPatch {
+  // Whether to add the patch to prep or not
+  // Packages that are not auto-patched will need to set this and n_path
+  bool add_to_prep = 1;
+
+  // Patch strip depth
+  int32 n_path = 2;
+}
+
+message ApplyPatch {
+  oneof patch {
+    // Automatically applied patch (may be problematic with complex specs)
+    // Ex. kernel should mostly use custom
+    AutoPatch auto_patch = 1;
+    // Custom spec change command for this patch (excluding add patch)
+    srpmproc.SpecChange custom = 2;
+  }
+}
+
 message Configuration {
   // Preset for source package
   // Currently only supports "rocky8" or "manual"
@@ -75,10 +96,6 @@ message Configuration {
   // Only used if preset is "manual"
   PresetOverride preset_override = 5;
 
-  // Whether to add the patch to prep or not
-  // Packages that are not auto-patched will need to set this and n_path
-  bool add_to_prep = 6;
-
-  // Patch strip depth
-  int32 n_path = 7;
+  // How to apply the patch to the spec
+  ApplyPatch apply_patch = 6;
 }

@@ -694,8 +694,6 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 						Mode: &srpmprocpb.SpecChange_FileOperation_Add{
 							Add: true,
 						},
-						AddToPrep: cfg.AddToPrep,
-						NPath:     cfg.NPath,
 					},
 				},
 				Changelog: []*srpmprocpb.SpecChange_ChangelogOperation{
@@ -709,6 +707,24 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 		},
 		PatchName:    patchName,
 		PatchContent: genPatch.String(),
+	}
+
+	if cfg.ApplyPatch != nil {
+		switch x := cfg.ApplyPatch.Patch.(type) {
+		case *sidelinepb.ApplyPatch_AutoPatch:
+			response.Srpmproc.SpecChange.File[0].AddToPrep = x.AutoPatch.AddToPrep
+			response.Srpmproc.SpecChange.File[0].NPath = x.AutoPatch.NPath
+		case *sidelinepb.ApplyPatch_Custom:
+			response.Srpmproc.SpecChange.File = append(response.Srpmproc.SpecChange.File, x.Custom.File...)
+			response.Srpmproc.SpecChange.Changelog = append(response.Srpmproc.SpecChange.Changelog, x.Custom.Changelog...)
+			response.Srpmproc.SpecChange.Append = append(response.Srpmproc.SpecChange.Append, x.Custom.Append...)
+			response.Srpmproc.SpecChange.NewField = append(response.Srpmproc.SpecChange.NewField, x.Custom.NewField...)
+			response.Srpmproc.SpecChange.SearchAndReplace = append(response.Srpmproc.SpecChange.SearchAndReplace, x.Custom.SearchAndReplace...)
+
+			for _, sar := range x.Custom.SearchAndReplace {
+				sar.Replace = strings.Replace(sar.Replace, "%%patch_name%%", patchName, -1)
+			}
+		}
 	}
 
 	return response, nil

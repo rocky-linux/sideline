@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+option go_package = "github.com/rocky-linux/srpmproc/pb;srpmprocpb";
+
+package srpmproc;
+
+// Replace directive replaces a file from the rpm repository
+// with a file from the patch repository.
+// Replacing content can either be inline or in the same patch-tree.
+message Replace {
+  // Required - Replaced file
+  string file = 1;
+
+  oneof replacing {
+    // Replace with in-tree file
+    string with_file = 2;
+
+    // Replace with inline content
+    string with_inline = 3;
+
+    // Replace with lookaside cache object
+    string with_lookaside = 4;
+  }
+}
+
+// Delete directive deletes literal files from the rpm repository.
+// Won't delete from spec automatically.
+// Use the `SpecChange` directive for that
+message Delete {
+  // Required
+  string file = 1;
+}
+
+// Add directive adds a file from the patch repository to the rpm repository.
+// The file is added in the `SOURCES` directory
+// Won't add to spec automatically.
+// Use the `SpecChange` directive for that
+message Add {
+  // Required - file to add
+  oneof source {
+    string file = 1;
+    string lookaside = 2;
+  }
+
+  // Overrides file name if specified
+  string name = 3;
+}
+
+// Lookaside directive puts patched files in blob storage.
+// If tar is true, the files will be put into a tarball and gzipped
+message Lookaside {
+  // Required - List of files that should be stored in blob storage
+  repeated string file = 1;
+
+  // Whether files should be put into a tarball and gzipped
+  bool tar = 2;
+
+  // Name of tar file, only used and required if tar is true
+  string archive_name = 3;
+
+  // Whether if files should be retrieved from patch tree
+  bool from_patch_tree = 4;
+}
+
+// SpecChange directive makes it possible to execute certain
+// plans against the package spec
+message SpecChange {
+  // The FileOperation plan allows patchers to add or delete
+  // a file from the spec.
+  message FileOperation {
+    enum Type {
+      Unknown = 0;
+      Source = 1;
+      Patch = 2;
+    }
+    // File name
+    string name = 1;
+    // File type
+    Type type = 2;
+
+    oneof mode {
+      // Add won't add the file to the tree.
+      // Use the `Add` directive for that
+      bool add = 3;
+      // Delete won't delete the file from the tree.
+      // Use the `Delete` directive for that
+      bool delete = 4;
+    }
+
+    // Only works for patch type
+    bool add_to_prep = 5;
+    int32 n_path = 6;
+  }
+  // ChangelogOperation adds a new changelog entry
+  message ChangelogOperation {
+    string author_name = 1;
+    string author_email = 2;
+    repeated string message = 3;
+  }
+  // SearchAndReplaceOperation replaces substring with value
+  // in a specified field
+  message SearchAndReplaceOperation {
+    oneof identifier {
+      // replace occurrences in field value
+      string field = 1;
+      // replace occurrences in any line
+      bool any = 2;
+      // replace occurrences that starts with find
+      bool starts_with = 3;
+      // replace occurrences that ends with find
+      bool ends_with = 4;
+    }
+    string find = 5;
+    string replace = 6;
+    // How many occurences to replace.
+    // Set to -1 for all
+    sint32 n = 7;
+  }
+  // AppendOperation appends a value to specified field or section
+  message AppendOperation {
+    string field = 1;
+    string value = 2;
+  }
+  // NewFieldOperation adds a new kv to the spec
+  // The field will be grouped if other fields of same name exists
+  message NewFieldOperation {
+    // Key cannot be Source or Patch
+    string key = 1;
+    string value = 2;
+  }
+
+  repeated FileOperation file = 1;
+  repeated ChangelogOperation changelog = 2;
+  repeated SearchAndReplaceOperation search_and_replace = 3;
+  repeated AppendOperation append = 4;
+  repeated NewFieldOperation new_field = 5;
+}
+
+message Patch {
+  // Path to patch file from repo root
+  string file = 1;
+
+  // Srpmproc adds `SOURCES/` to files in a diff
+  // without a prefix if strict is false.
+  // If strict is true, then that is disabled.
+  bool strict = 2;
+}
+
+message Cfg {
+  repeated Replace replace = 1;
+  repeated Delete delete = 2;
+  repeated Add add = 3;
+  repeated Lookaside lookaside = 4;
+  SpecChange spec_change = 5;
+  repeated Patch patch = 6;
+}
