@@ -720,6 +720,7 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 			response.Srpmproc.SpecChange.Append = append(response.Srpmproc.SpecChange.Append, x.Custom.Append...)
 			response.Srpmproc.SpecChange.NewField = append(response.Srpmproc.SpecChange.NewField, x.Custom.NewField...)
 			response.Srpmproc.SpecChange.SearchAndReplace = append(response.Srpmproc.SpecChange.SearchAndReplace, x.Custom.SearchAndReplace...)
+			response.Srpmproc.SpecChange.DisableAutoAlign = x.Custom.DisableAutoAlign
 
 			for _, sar := range x.Custom.SearchAndReplace {
 				sar.Replace = strings.Replace(sar.Replace, "%%patch_name%%", patchName, -1)

@@ -8,7 +8,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/gosimple/slug v1.12.0
-	github.com/rocky-linux/srpmproc v0.3.0
+	github.com/rocky-linux/srpmproc v0.3.5
 	github.com/spf13/cobra v1.1.1
 	github.com/ulikunitz/xz v0.5.10
 	google.golang.org/protobuf v1.25.0
