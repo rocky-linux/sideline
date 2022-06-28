@@ -99,4 +99,8 @@ message Configuration {
 
   // How to apply the patch to the spec
   ApplyPatch apply_patch = 6;
+
+  // Contact information
+  string contact_email = 7;
+  string contact_name = 8;
 }

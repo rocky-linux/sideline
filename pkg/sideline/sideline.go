@@ -84,10 +84,6 @@ type Response struct {
 // We may add support for SCM clones as well as other distributions in the
 // future, but let's keep it simple for now.
 func fetchUnpackDistributionSource(srpmUrl string) (*git.Repository, *rpm.Package, error) {
-	// srpmUrl = "https://dl.rockylinux.org/pub/rocky/8.5/BaseOS/source/tree/Packages/k/kernel-4.18.0-348.12.2.el8_5.src.rpm"
-	// srpmUrl = "file:///tmp/kernelsrc/kernel-4.18.0-348.12.2.el8_5.src.rpm"
-	// srpmUrl = "http://dl.rockylinux.org/pub/rocky/8.5/BaseOS/source/tree/Packages/o/openssl-1.1.1k-5.el8_5.src.rpm"
-
 	var body io.ReadCloser
 
 	// Fetch the SRPM file
@@ -701,8 +697,8 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 	commitMsg := fmt.Sprintf("Backport changes from %s (tag: %s)", cfg.Upstream.GetGit(), cfg.Upstream.GetTag())
 	commitHash, err := distroW.Commit(commitMsg, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "RESF Sideline (Backporter)",
-			Email: "releng+sideline@rockylinux.org",
+			Name:  cfg.ContactName,
+			Email: cfg.ContactEmail,
 			When:  time.Now(),
 		},
 	})
@@ -737,8 +733,8 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 				},
 				Changelog: []*srpmprocpb.SpecChange_ChangelogOperation{
 					{
-						AuthorName:  "RESF Sideline",
-						AuthorEmail: "mustafa+sideline@rockylinux.org",
+						AuthorName:  cfg.ContactName,
+						AuthorEmail: cfg.ContactEmail,
 						Message:     []string{commitMsg},
 					},
 				},

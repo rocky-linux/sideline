@@ -47,13 +47,17 @@ var root = &cobra.Command{
 }
 
 var (
-	inConfig string
-	output   string
+	inConfig     string
+	output       string
+	defaultEmail string
+	defaultName  string
 )
 
 func init() {
 	root.Flags().StringVarP(&inConfig, "config", "c", "", "Config file to process")
 	root.Flags().StringVarP(&output, "output", "o", ".", "Output directory")
+	root.Flags().StringVarP(&defaultEmail, "default-email", "e", "releng+sideline@rockylinux.org", "Default email address")
+	root.Flags().StringVarP(&defaultName, "default-name", "n", "RESF Sideline (Backporter)", "Default name")
 
 	_ = root.MarkFlagRequired("config")
 }
@@ -62,6 +66,12 @@ func mn(_ *cobra.Command, _ []string) {
 	cfg, err := sideline.ParseCfg(inConfig)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if cfg.ContactEmail == "" {
+		cfg.ContactEmail = defaultEmail
+	}
+	if cfg.ContactName == "" {
+		cfg.ContactName = defaultName
 	}
 
 	resp, err := sideline.Run(cfg)
