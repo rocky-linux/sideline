@@ -27,6 +27,7 @@ message Upstream {
 message SearchReplace {
   string find = 1;
   string replace = 2;
+  int32 n = 3;
 }
 
 message FileChange {

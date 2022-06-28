@@ -437,7 +437,15 @@ func backportUpstreamChanges(distro *git.Repository, upstream *git.Repository, c
 					return fmt.Errorf("failed to read file: %v", err)
 				}
 
-				fileContents = []byte(strings.Replace(string(fileContents), searchReplace.Find, searchReplace.Replace, -1))
+				if !strings.HasPrefix(searchReplace.Find, "(!regex)") {
+					fileContents = []byte(strings.Replace(string(fileContents), searchReplace.Find, searchReplace.Replace, int(searchReplace.N)))
+				} else {
+					regx, err := regexp.Compile(strings.TrimPrefix(searchReplace.Find, "(!regex)"))
+					if err != nil {
+						return fmt.Errorf("failed to compile regex: %v", err)
+					}
+					fileContents = []byte(regx.ReplaceAllString(string(fileContents), searchReplace.Replace))
+				}
 				err = writeFileBillyFs(distroW.Filesystem, fileChange.Path, fileContents)
 				if err != nil {
 					return fmt.Errorf("failed to write file: %v", err)
