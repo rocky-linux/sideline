@@ -514,6 +514,12 @@ func validateCfg(cfg *sidelinepb.Configuration) error {
 				BaseUrl: "https://dl.rockylinux.org/pub/rocky/8",
 			},
 		}
+	case "rocky9":
+		cfg.PresetOverride = &sidelinepb.PresetOverride{
+			Override: &sidelinepb.PresetOverride_BaseUrl{
+				BaseUrl: "https://dl.rockylinux.org/pub/rocky/9",
+			},
+		}
 	case "manual":
 		if cfg.PresetOverride == nil || cfg.PresetOverride.Override == nil {
 			return fmt.Errorf("preset override is required for manual")
