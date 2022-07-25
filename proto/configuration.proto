@@ -2,6 +2,7 @@ syntax = "proto3";
 
 option go_package = "github.com/rocky-linux/sideline/pb;sidelinepb";
 
+import "google/protobuf/wrappers.proto";
 import "third_party/github.com/rocky-linux/srpmproc/proto/cfg.proto";
 
 package sideline;
@@ -22,6 +23,25 @@ message Upstream {
     // Caller wants a tag
     string tag = 3;
   }
+
+  // Compare revision (optional)
+  oneof compare {
+    google.protobuf.StringValue compare_with_tag = 4;
+  }
+  // Whether the compare repo should be laid out in disk
+  // Currently always true whether specified or not because
+  // of how `git log` operation is implemented
+  bool compare_should_use_osfs = 5;
+  enum CompareMode {
+    Unknown = 0;
+    // Reduce refspecs we fetch for the kernel
+    // TM = Target major version, CV = Compare version
+    // Uses following refspecs:
+    //   * refs/tags/vTM.*
+    //   * refs/tags/vCV
+    KernelTag = 1;
+  }
+  CompareMode compare_mode = 6;
 }
 
 message SearchReplace {

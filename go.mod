@@ -1,6 +1,6 @@
 module github.com/rocky-linux/sideline
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cavaliergopher/cpio v1.0.1
@@ -11,6 +11,7 @@ require (
 	github.com/rocky-linux/srpmproc v0.3.5
 	github.com/spf13/cobra v1.1.1
 	github.com/ulikunitz/xz v0.5.10
+	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208
 	google.golang.org/protobuf v1.25.0
 )
 
