@@ -35,6 +35,17 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"strings"
+	"time"
+
 	"github.com/cavaliergopher/cpio"
 	"github.com/cavaliergopher/rpm"
 	"github.com/go-git/go-billy/v5"
@@ -53,16 +64,6 @@ import (
 	srpmprocpb "github.com/rocky-linux/srpmproc/pb"
 	"github.com/ulikunitz/xz"
 	"golang.org/x/sync/errgroup"
-	"io"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"regexp"
-	"strings"
-	"time"
 )
 
 var (
@@ -108,6 +109,7 @@ type UpstreamRepos struct {
 type FetchRepo struct {
 	URL     string
 	Tag     *string
+	Branch  *string
 	Depth   int32
 	UseOsfs bool
 	Mode    sidelinepb.Upstream_CompareMode
@@ -318,13 +320,24 @@ func fetchUpstream(upstream *FetchRepo, compareWith *FetchRepo) (*UpstreamRepos,
 
 	var g *git.Repository
 	eg.Go(func() error {
-		log.Printf("Using upstream repo: %s (tag %s)", upstream.URL, *upstream.Tag)
+		if upstream.Tag != nil {
+			log.Printf("Using upstream repo: %s (tag %s)", upstream.URL, *upstream.Tag)
+		} else {
+			log.Printf("Using upstream repo: %s (branch %s)", upstream.URL, *upstream.Branch)
+		}
 		s := memory.NewStorage()
 		fs := memfs.New()
+
+		var refName plumbing.ReferenceName
+		if upstream.Tag != nil {
+			refName = plumbing.NewTagReferenceName(*upstream.Tag)
+		} else {
+			refName = plumbing.NewBranchReferenceName(*upstream.Branch)
+		}
 		var err error
 		g, err = git.Clone(s, fs, &git.CloneOptions{
 			URL:           upstream.URL,
-			ReferenceName: plumbing.NewTagReferenceName(*upstream.Tag),
+			ReferenceName: refName,
 			SingleBranch:  true,
 			Depth:         int(upstream.Depth),
 			Progress:      os.Stdout,
@@ -889,11 +902,14 @@ func Run(cfg *sidelinepb.Configuration) (*Response, error) {
 		return nil, err
 	}
 
-	upstreamTag := cfg.Upstream.GetTag()
 	upstreamFetchRepo := &FetchRepo{
 		URL:   cfg.Upstream.GetGit(),
-		Tag:   &upstreamTag,
 		Depth: cfg.Upstream.Depth,
+	}
+	if x := cfg.Upstream.GetTag(); x != "" {
+		upstreamFetchRepo.Tag = &x
+	} else if x := cfg.Upstream.GetBranch(); x != "" {
+		upstreamFetchRepo.Branch = &x
 	}
 	var compareWithFetchRepo *FetchRepo
 	if cfg.Upstream.GetCompareWithTag() != nil {

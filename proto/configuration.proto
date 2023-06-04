@@ -22,6 +22,7 @@ message Upstream {
   oneof target {
     // Caller wants a tag
     string tag = 3;
+    string branch = 7;
   }
 
   // Compare revision (optional)
